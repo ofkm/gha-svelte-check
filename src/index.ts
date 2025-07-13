@@ -40,9 +40,9 @@ async function run(): Promise<void> {
 
     core.info(`svelte-check exit code: ${exitCode}`);
 
-    const errorCount = (output.match(/^Error:/gm) || []).length;
-    const warningCount = (output.match(/^Warning:/gm) || []).length;
-    const hintCount = (output.match(/^Hint:/gm) || []).length;
+    const errorCount = (output.match(/Error:/g) || []).length;
+    const warningCount = (output.match(/Warning:/g) || []).length;  
+    const hintCount = (output.match(/Hint:/g) || []).length;
 
     core.setOutput('errors', errorCount.toString());
     core.setOutput('warnings', warningCount.toString());
