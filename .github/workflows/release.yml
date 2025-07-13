@@ -51,7 +51,7 @@ jobs:
             ### Usage
             ```yaml
             - name: Run Svelte Check
-              uses: kylemendell/gha-svelte-check@${{ github.ref_name }}
+              uses: ofkm/gha-svelte-check@${{ github.ref_name }}
               with:
                 working-directory: './src'
                 fail-on-warnings: true
