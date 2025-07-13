@@ -19,6 +19,9 @@ jobs:
       
       - name: Install dependencies
         run: npm ci
+
+      - name: Build action
+        run: npm run build
       
       - name: Setup test project
         working-directory: ./test-project
@@ -26,6 +29,3 @@ jobs:
       
       - name: Run all tests
         run: npm test
-      
-      - name: Build action
-        run: npm run build
