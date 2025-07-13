@@ -1,0 +1,125 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release'
+        required: true
+        type: string
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build action
+        run: npm run build
+
+      - name: Check build output
+        run: test -f dist/index.js
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build action
+        run: npm run build
+
+      - name: Commit dist
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add dist/
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Build for release ${{ github.ref_name }}"
+            git push origin HEAD:${{ github.ref_name }} --force
+          fi
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            ## Changes in ${{ github.ref_name }}
+            
+            ### Features
+            - Run svelte-check with enhanced error reporting
+            - Problem matcher for better GitHub Actions integration
+            - Configurable failure conditions for warnings and hints
+            
+            ### Usage
+            ```yaml
+            - name: Run Svelte Check
+              uses: kylemendell/gha-svelte-check@${{ github.ref_name }}
+              with:
+                working-directory: './src'
+                fail-on-warnings: true
+                fail-on-hints: false
+                tsconfig: './tsconfig.json'
+            ```
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+
+  update-major-tag:
+    needs: release
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'rc')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update major version tag
+        run: |
+          TAG=${{ github.ref_name }}
+          MAJOR_VERSION=$(echo $TAG | cut -d. -f1)
+          
+          echo "Updating $MAJOR_VERSION to point to $TAG"
+          
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Delete the major version tag if it exists
+          git tag -d $MAJOR_VERSION 2>/dev/null || true
+          git push origin :refs/tags/$MAJOR_VERSION 2>/dev/null || true
+          
+          # Create new major version tag pointing to current commit
+          git tag $MAJOR_VERSION
+          git push origin $MAJOR_VERSION

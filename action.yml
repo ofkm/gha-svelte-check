@@ -1,0 +1,36 @@
+name: 'Svelte Check with Problem Matcher'
+description: 'Run svelte-check with custom problem matcher for better error reporting in GitHub Actions'
+author: 'Kyle Mendell'
+branding:
+  icon: 'check-circle'
+  color: 'orange'
+
+inputs:
+  working-directory:
+    description: 'Working directory to run svelte-check in'
+    required: false
+    default: '.'
+  fail-on-warnings:
+    description: 'Fail the action if warnings are found'
+    required: false
+    default: 'false'
+  fail-on-hints:
+    description: 'Fail the action if hints are found'
+    required: false
+    default: 'false'
+  tsconfig:
+    description: 'Path to tsconfig file'
+    required: false
+    default: ''
+
+outputs:
+  errors:
+    description: 'Number of errors found'
+  warnings:
+    description: 'Number of warnings found'
+  hints:
+    description: 'Number of hints found'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

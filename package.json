@@ -1,0 +1,28 @@
+{
+  "name": "gha-svelte-check",
+  "version": "1.0.0",
+  "description": "GitHub Action for running svelte-check with problem matcher",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "rm -rf lib dist && tsc --outDir lib && ncc build lib/src/index.js -o dist",
+    "dev": "tsc --watch",
+    "test": "jest",
+    "test:unit": "jest __tests__/index.test.ts",
+    "test:integration": "jest __tests__/integration.test.ts",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "clean": "rm -rf lib dist"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/exec": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.13",
+    "@vercel/ncc": "^0.38.3",
+    "jest": "^30.0.4",
+    "ts-jest": "^29.4.0",
+    "typescript": "^5.8.3"
+  }
+}
