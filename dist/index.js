@@ -46,22 +46,18 @@ const exec = __importStar(__nccwpck_require__(5236));
 const path = __importStar(__nccwpck_require__(6928));
 async function run() {
     try {
-        // Get inputs
         const workingDirectory = core.getInput('working-directory') || '.';
         const failOnWarnings = core.getInput('fail-on-warnings') === 'true';
         const failOnHints = core.getInput('fail-on-hints') === 'true';
         const tsconfig = core.getInput('tsconfig');
-        // Add problem matcher
         const matcherPath = path.join(__dirname, '..', '.github', 'svelte-check-matcher.json');
         core.info(`Adding problem matcher: ${matcherPath}`);
         console.log(`::add-matcher::${matcherPath}`);
-        // Build svelte-check command
         const command = 'npx';
         const args = ['svelte-check'];
         if (tsconfig) {
             args.push('--tsconfig', tsconfig);
         }
-        // Execute svelte-check
         let output = '';
         let errorOutput = '';
         const options = {
@@ -77,20 +73,17 @@ async function run() {
             ignoreReturnCode: true
         };
         const exitCode = await exec.exec(command, args, options);
-        // Parse output for counts
-        const errorCount = (output.match(/Error:/g) || []).length;
-        const warningCount = (output.match(/Warning:/g) || []).length;
-        const hintCount = (output.match(/Hint:/g) || []).length;
-        // Set outputs
+        core.info(`svelte-check exit code: ${exitCode}`);
+        const errorCount = (output.match(/^Error:/gm) || []).length;
+        const warningCount = (output.match(/^Warning:/gm) || []).length;
+        const hintCount = (output.match(/^Hint:/gm) || []).length;
         core.setOutput('errors', errorCount.toString());
         core.setOutput('warnings', warningCount.toString());
         core.setOutput('hints', hintCount.toString());
-        // Log summary
         core.info(`Svelte Check Results:`);
         core.info(`  Errors: ${errorCount}`);
         core.info(`  Warnings: ${warningCount}`);
         core.info(`  Hints: ${hintCount}`);
-        // Determine if action should fail
         let shouldFail = false;
         if (errorCount > 0) {
             shouldFail = true;
@@ -116,7 +109,6 @@ async function run() {
         core.setFailed(`Action failed: ${errorMessage}`);
     }
 }
-// Only run if this is the main module (not being imported for testing)
 if (require.main === require.cache[eval('__filename')]) {
     run();
 }

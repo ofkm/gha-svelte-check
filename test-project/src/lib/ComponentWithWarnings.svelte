@@ -8,9 +8,8 @@
   // WARNING: Unused variable
   let unusedVariable = "I'm not used anywhere";
 
-  // WARNING: Implicit any
+  // WARNING: Implicit any - REMOVE the type annotation to make it implicit
   function processData(input) {
-    // Missing type annotation
     return input.toString();
   }
 
@@ -18,7 +17,7 @@
 
   // WARNING: Unsafe type assertion
   function handleInput(event: Event) {
-    value = (event.target as any).value; // Could use HTMLInputElement instead
+    value = (event.target as any).value;
   }
 
   // WARNING: Non-null assertion without check
@@ -30,7 +29,7 @@
 
 <div>
   <h2>Component with Warnings</h2>
-  <input on:input={handleInput} bind:value />
+  <input oninput={handleInput} bind:value />
   <p>Value: {value}</p>
   <p>Data: {data}</p>
   <button onclick={useElement}>Focus element</button>

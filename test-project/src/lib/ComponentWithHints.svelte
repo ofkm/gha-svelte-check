@@ -7,12 +7,6 @@
     return "I'm never called";
   }
 
-  // HINT: Could be const instead of let
-  let constantValue = 'This never changes';
-
-  // HINT: Prefer const assertion
-  let colors = ['red', 'green', 'blue']; // Could be as const
-
   let activeCount = 0;
 
   function increment() {
@@ -24,6 +18,4 @@
   <h2>Component with Hints</h2>
   <p>Active count: {activeCount}</p>
   <button onclick={increment}>Increment</button>
-  <p>Colors: {colors.join(', ')}</p>
-  <p>Constant: {constantValue}</p>
 </div>
