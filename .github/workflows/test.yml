@@ -20,37 +20,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
-      - name: Run unit tests
-        run: npm test
-      
-      - name: Build action
-        run: npm run build
-      
       - name: Setup test project
         working-directory: ./test-project
         run: npm install
       
-      - name: Test action with errors (should fail)
-        id: test-fail
-        uses: ./
-        continue-on-error: true
-        with:
-          working-directory: './test-project'
-          fail-on-warnings: false
-          fail-on-hints: false
+      - name: Run all tests
+        run: npm test
       
-      - name: Verify action found errors
-        run: |
-          if [ "${{ steps.test-fail.outcome }}" != "failure" ]; then
-            echo "❌ Expected action to fail but it passed"
-            exit 1
-          fi
-          echo "✅ Action correctly failed due to errors"
-      
-      - name: Test action with warnings enabled (should fail)
-        uses: ./
-        continue-on-error: true
-        with:
-          working-directory: './test-project'
-          fail-on-warnings: true
-          fail-on-hints: false
+      - name: Build action
+        run: npm run build
