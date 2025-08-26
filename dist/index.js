@@ -45,6 +45,27 @@ const core = __importStar(__nccwpck_require__(7484));
 const exec = __importStar(__nccwpck_require__(5236));
 const path = __importStar(__nccwpck_require__(6928));
 const fs = __importStar(__nccwpck_require__(9896));
+function stripAnsi(input) {
+    return input.replace(/[\u001B\u009B][[()\]#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+}
+function annotateFromOutput(output, workingDirectory) {
+    const clean = stripAnsi(output);
+    const re = /^(.+?):(\d+):(\d+)\s+(Error|Warning|Hint):\s+(.*)$/gm;
+    let match;
+    while ((match = re.exec(clean))) {
+        const [, relFile, lineStr, colStr, sev, message] = match;
+        const filePath = path.normalize(path.join(workingDirectory, relFile));
+        const line = parseInt(lineStr, 10) || 1;
+        const col = parseInt(colStr, 10) || 1;
+        const props = { file: filePath, startLine: line, startColumn: col, title: 'svelte-check' };
+        if (sev === 'Error')
+            core.error(message, props);
+        else if (sev === 'Warning')
+            core.warning(message, props);
+        else
+            core.notice(message, props);
+    }
+}
 async function run() {
     try {
         const workingDirectory = core.getInput('working-directory') || '.';
@@ -54,7 +75,6 @@ async function run() {
         const matcherPath = path.join(__dirname, '..', '.github', 'svelte-check-matcher.json');
         core.info(`Adding problem matcher: ${matcherPath}`);
         console.log(`::add-matcher::${matcherPath}`);
-        // Detect SvelteKit and run `svelte-kit sync` to ensure .svelte-kit/tsconfig.json exists
         let looksLikeSvelteKit = false;
         try {
             const pkgJsonPath = path.join(workingDirectory, 'package.json');
@@ -100,6 +120,7 @@ async function run() {
         };
         const exitCode = await exec.exec(npx, args, options);
         core.info(`svelte-check exit code: ${exitCode}`);
+        annotateFromOutput(output + '\n' + errorOutput, workingDirectory);
         const errorCount = (output.match(/Error:/g) || []).length;
         const warningCount = (output.match(/Warning:/g) || []).length;
         const hintCount = (output.match(/Hint:/g) || []).length;
@@ -123,7 +144,6 @@ async function run() {
             shouldFail = true;
             core.error(`Found ${hintCount} hints (fail-on-hints is enabled)`);
         }
-        // If svelte-check failed for other reasons, surface stderr
         if (!shouldFail && exitCode !== 0 && errorOutput.trim()) {
             shouldFail = true;
             core.error(errorOutput);
