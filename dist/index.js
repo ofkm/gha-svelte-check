@@ -45,6 +45,46 @@ const core = __importStar(__nccwpck_require__(7484));
 const exec = __importStar(__nccwpck_require__(5236));
 const path = __importStar(__nccwpck_require__(6928));
 const fs = __importStar(__nccwpck_require__(9896));
+function stripAnsi(input) {
+    return input.replace(/[\u001B\u009B][[()\]#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+}
+function parseFindings(output, workingDirectory) {
+    const clean = stripAnsi(output);
+    const lines = clean.split(/\r?\n/);
+    const findings = [];
+    for (let i = 0; i < lines.length; i++) {
+        const loc = lines[i].match(/^(.+?):(\d+):(\d+)$/);
+        if (!loc)
+            continue;
+        const [, relFile, lineStr, colStr] = loc;
+        const next = lines[i + 1] || '';
+        const sevLine = next.match(/^\s*(Error|Warning|Warn|Hint):\s*(.*?)(?:\s+\([^)]+\))?$/);
+        if (!sevLine)
+            continue;
+        let sev = sevLine[1];
+        const message = sevLine[2];
+        if (sev === 'Warn')
+            sev = 'Warning';
+        const filePath = path.normalize(path.join(workingDirectory, relFile));
+        const line = parseInt(lineStr, 10) || 1;
+        const col = parseInt(colStr, 10) || 1;
+        findings.push({ severity: sev, message, file: filePath, line, col });
+    }
+    return findings;
+}
+function annotateFromOutput(output, workingDirectory) {
+    const findings = parseFindings(output, workingDirectory);
+    for (const f of findings) {
+        const props = { file: f.file, startLine: f.line, startColumn: f.col, title: 'svelte-check' };
+        if (f.severity === 'Error')
+            core.error(f.message, props);
+        else if (f.severity === 'Warning')
+            core.warning(f.message, props);
+        else
+            core.notice(f.message, props);
+    }
+    return findings;
+}
 async function run() {
     try {
         const workingDirectory = core.getInput('working-directory') || '.';
@@ -54,7 +94,6 @@ async function run() {
         const matcherPath = path.join(__dirname, '..', '.github', 'svelte-check-matcher.json');
         core.info(`Adding problem matcher: ${matcherPath}`);
         console.log(`::add-matcher::${matcherPath}`);
-        // Detect SvelteKit and run `svelte-kit sync` to ensure .svelte-kit/tsconfig.json exists
         let looksLikeSvelteKit = false;
         try {
             const pkgJsonPath = path.join(workingDirectory, 'package.json');
@@ -100,9 +139,10 @@ async function run() {
         };
         const exitCode = await exec.exec(npx, args, options);
         core.info(`svelte-check exit code: ${exitCode}`);
-        const errorCount = (output.match(/Error:/g) || []).length;
-        const warningCount = (output.match(/Warning:/g) || []).length;
-        const hintCount = (output.match(/Hint:/g) || []).length;
+        const findings = annotateFromOutput(output + '\n' + errorOutput, workingDirectory);
+        const errorCount = findings.filter((f) => f.severity === 'Error').length;
+        const warningCount = findings.filter((f) => f.severity === 'Warning').length;
+        const hintCount = findings.filter((f) => f.severity === 'Hint').length;
         core.setOutput('errors', String(errorCount));
         core.setOutput('warnings', String(warningCount));
         core.setOutput('hints', String(hintCount));
@@ -123,7 +163,6 @@ async function run() {
             shouldFail = true;
             core.error(`Found ${hintCount} hints (fail-on-hints is enabled)`);
         }
-        // If svelte-check failed for other reasons, surface stderr
         if (!shouldFail && exitCode !== 0 && errorOutput.trim()) {
             shouldFail = true;
             core.error(errorOutput);
