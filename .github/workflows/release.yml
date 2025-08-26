@@ -46,7 +46,7 @@ jobs:
           body: |
             ## GitHub Action: Svelte Check ${{ github.ref_name }}
 
-            Run `svelte-check` on a @sveltejs project.
+            Run `svelte-check` on a sveltejs project.
 
             ### Usage
             ```yaml

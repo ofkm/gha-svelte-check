@@ -3,6 +3,29 @@ import * as exec from '@actions/exec';
 import * as path from 'path';
 import * as fs from 'fs';
 
+function stripAnsi(input: string): string {
+  return input.replace(/[\u001B\u009B][[()\]#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+}
+
+function annotateFromOutput(output: string, workingDirectory: string) {
+  const clean = stripAnsi(output);
+  const re = /^(.+?):(\d+):(\d+)\s+(Error|Warning|Hint):\s+(.*)$/gm;
+
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(clean))) {
+    const [, relFile, lineStr, colStr, sev, message] = match;
+    const filePath = path.normalize(path.join(workingDirectory, relFile));
+    const line = parseInt(lineStr, 10) || 1;
+    const col = parseInt(colStr, 10) || 1;
+
+    const props = { file: filePath, startLine: line, startColumn: col, title: 'svelte-check' as const };
+
+    if (sev === 'Error') core.error(message, props);
+    else if (sev === 'Warning') core.warning(message, props);
+    else core.notice(message, props);
+  }
+}
+
 async function run(): Promise<void> {
   try {
     const workingDirectory = core.getInput('working-directory') || '.';
@@ -14,7 +37,6 @@ async function run(): Promise<void> {
     core.info(`Adding problem matcher: ${matcherPath}`);
     console.log(`::add-matcher::${matcherPath}`);
 
-    // Detect SvelteKit and run `svelte-kit sync` to ensure .svelte-kit/tsconfig.json exists
     let looksLikeSvelteKit = false;
     try {
       const pkgJsonPath = path.join(workingDirectory, 'package.json');
@@ -65,6 +87,8 @@ async function run(): Promise<void> {
     const exitCode = await exec.exec(npx, args, options);
     core.info(`svelte-check exit code: ${exitCode}`);
 
+    annotateFromOutput(output + '\n' + errorOutput, workingDirectory);
+
     const errorCount = (output.match(/Error:/g) || []).length;
     const warningCount = (output.match(/Warning:/g) || []).length;
     const hintCount = (output.match(/Hint:/g) || []).length;
@@ -93,7 +117,6 @@ async function run(): Promise<void> {
       core.error(`Found ${hintCount} hints (fail-on-hints is enabled)`);
     }
 
-    // If svelte-check failed for other reasons, surface stderr
     if (!shouldFail && exitCode !== 0 && errorOutput.trim()) {
       shouldFail = true;
       core.error(errorOutput);

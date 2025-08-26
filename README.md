@@ -6,7 +6,7 @@ A Simple GitHub Action that runs `svelte-check` on the given directory.
 
 ```yaml
 - name: Run Svelte Check
-  uses: ofkm/gha-svelte-check@latest
+  uses: ofkm/gha-svelte-check@v1
   with:
     working-directory: './src'
 ```
