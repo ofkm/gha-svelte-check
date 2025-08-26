@@ -10,12 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       - name: Install dependencies
@@ -45,20 +45,17 @@ jobs:
           release_name: Release ${{ github.ref_name }}
           body: |
             ## GitHub Action: Svelte Check ${{ github.ref_name }}
-            
-            Run `svelte-check` with enhanced error reporting and problem matcher integration.
-            
+
+            Run `svelte-check` on a @sveltejs project.
+
             ### Usage
             ```yaml
             - name: Run Svelte Check
               uses: ofkm/gha-svelte-check@${{ github.ref_name }}
               with:
                 working-directory: './src'
-                fail-on-warnings: true
-                fail-on-hints: false
-                tsconfig: './tsconfig.json'
             ```
-            
+
             ### What's included
             - ✅ TypeScript error detection
             - ✅ Problem matcher for GitHub UI integration  
@@ -81,16 +78,16 @@ jobs:
         run: |
           TAG=${{ github.ref_name }}
           MAJOR_VERSION=$(echo $TAG | cut -d. -f1)
-          
+
           echo "Updating $MAJOR_VERSION to point to $TAG"
-          
+
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          
+
           # Delete the major version tag if it exists
           git tag -d $MAJOR_VERSION 2>/dev/null || true
           git push origin :refs/tags/$MAJOR_VERSION 2>/dev/null || true
-          
+
           # Create new major version tag pointing to current commit
           git tag $MAJOR_VERSION
           git push origin $MAJOR_VERSION

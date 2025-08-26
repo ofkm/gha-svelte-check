@@ -44,6 +44,7 @@ exports.run = run;
 const core = __importStar(__nccwpck_require__(7484));
 const exec = __importStar(__nccwpck_require__(5236));
 const path = __importStar(__nccwpck_require__(6928));
+const fs = __importStar(__nccwpck_require__(9896));
 async function run() {
     try {
         const workingDirectory = core.getInput('working-directory') || '.';
@@ -53,34 +54,59 @@ async function run() {
         const matcherPath = path.join(__dirname, '..', '.github', 'svelte-check-matcher.json');
         core.info(`Adding problem matcher: ${matcherPath}`);
         console.log(`::add-matcher::${matcherPath}`);
-        const command = 'npx';
+        // Detect SvelteKit and run `svelte-kit sync` to ensure .svelte-kit/tsconfig.json exists
+        let looksLikeSvelteKit = false;
+        try {
+            const pkgJsonPath = path.join(workingDirectory, 'package.json');
+            const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
+            looksLikeSvelteKit = Boolean((pkg.dependencies && pkg.dependencies['@sveltejs/kit']) ||
+                (pkg.devDependencies && pkg.devDependencies['@sveltejs/kit']));
+        }
+        catch {
+            // ignore, skip sync
+        }
+        const npx = 'npx';
+        const options = {
+            cwd: workingDirectory,
+            listeners: {},
+            ignoreReturnCode: true,
+        };
+        if (looksLikeSvelteKit) {
+            core.info('Running svelte-kit sync to generate .svelte-kit artifacts...');
+            try {
+                const syncCode = await exec.exec(npx, ['svelte-kit', 'sync'], options);
+                core.info(`svelte-kit sync exit code: ${syncCode}`);
+            }
+            catch (e) {
+                core.warning(`svelte-kit sync failed, continuing anyway: ${e instanceof Error ? e.message : String(e)}`);
+            }
+        }
+        else {
+            core.info('Skipping svelte-kit sync (no @sveltejs/kit dependency detected).');
+        }
         const args = ['svelte-check'];
         if (tsconfig) {
             args.push('--tsconfig', tsconfig);
         }
         let output = '';
         let errorOutput = '';
-        const options = {
-            cwd: workingDirectory,
-            listeners: {
-                stdout: (data) => {
-                    output += data.toString();
-                },
-                stderr: (data) => {
-                    errorOutput += data.toString();
-                }
+        options.listeners = {
+            stdout: (data) => {
+                output += data.toString();
             },
-            ignoreReturnCode: true
+            stderr: (data) => {
+                errorOutput += data.toString();
+            },
         };
-        const exitCode = await exec.exec(command, args, options);
+        const exitCode = await exec.exec(npx, args, options);
         core.info(`svelte-check exit code: ${exitCode}`);
-        const errorCount = (output.match(/^Error:/gm) || []).length;
-        const warningCount = (output.match(/^Warning:/gm) || []).length;
-        const hintCount = (output.match(/^Hint:/gm) || []).length;
-        core.setOutput('errors', errorCount.toString());
-        core.setOutput('warnings', warningCount.toString());
-        core.setOutput('hints', hintCount.toString());
-        core.info(`Svelte Check Results:`);
+        const errorCount = (output.match(/Error:/g) || []).length;
+        const warningCount = (output.match(/Warning:/g) || []).length;
+        const hintCount = (output.match(/Hint:/g) || []).length;
+        core.setOutput('errors', String(errorCount));
+        core.setOutput('warnings', String(warningCount));
+        core.setOutput('hints', String(hintCount));
+        core.info('Svelte Check Results:');
         core.info(`  Errors: ${errorCount}`);
         core.info(`  Warnings: ${warningCount}`);
         core.info(`  Hints: ${hintCount}`);
@@ -96,6 +122,11 @@ async function run() {
         if (failOnHints && hintCount > 0) {
             shouldFail = true;
             core.error(`Found ${hintCount} hints (fail-on-hints is enabled)`);
+        }
+        // If svelte-check failed for other reasons, surface stderr
+        if (!shouldFail && exitCode !== 0 && errorOutput.trim()) {
+            shouldFail = true;
+            core.error(errorOutput);
         }
         if (shouldFail) {
             core.setFailed('Svelte check found issues');

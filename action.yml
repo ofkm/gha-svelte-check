@@ -1,9 +1,9 @@
-name: 'Svelte Check with Problem Matcher'
-description: 'Run svelte-check with custom problem matcher for better error reporting in GitHub Actions'
+name: 'Run Svelte Check'
+description: 'Run svelte-check on a @sveltejs project.'
 author: 'Kyle Mendell'
 branding:
   icon: 'check-circle'
-  color: 'orange'
+  color: 'red'
 
 inputs:
   working-directory:
@@ -32,5 +32,5 @@ outputs:
     description: 'Number of hints found'
 
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/index.js'
