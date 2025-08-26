@@ -7,23 +7,52 @@ function stripAnsi(input: string): string {
   return input.replace(/[\u001B\u009B][[()\]#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
 }
 
-function annotateFromOutput(output: string, workingDirectory: string) {
+function parseFindings(output: string, workingDirectory: string) {
   const clean = stripAnsi(output);
-  const re = /^(.+?):(\d+):(\d+)\s+(Error|Warning|Hint):\s+(.*)$/gm;
+  const lines = clean.split(/\r?\n/);
 
-  let match: RegExpExecArray | null;
-  while ((match = re.exec(clean))) {
-    const [, relFile, lineStr, colStr, sev, message] = match;
+  type Finding = {
+    severity: 'Error' | 'Warning' | 'Hint';
+    message: string;
+    file: string;
+    line: number;
+    col: number;
+  };
+
+  const findings: Finding[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const loc = lines[i].match(/^(.+?):(\d+):(\d+)$/);
+    if (!loc) continue;
+
+    const [, relFile, lineStr, colStr] = loc;
+    const next = lines[i + 1] || '';
+    const sevLine = next.match(/^\s*(Error|Warning|Warn|Hint):\s*(.*?)(?:\s+\([^)]+\))?$/);
+    if (!sevLine) continue;
+
+    let sev = sevLine[1] as 'Error' | 'Warning' | 'Hint' | 'Warn';
+    const message = sevLine[2];
+
+    if (sev === 'Warn') sev = 'Warning';
     const filePath = path.normalize(path.join(workingDirectory, relFile));
     const line = parseInt(lineStr, 10) || 1;
     const col = parseInt(colStr, 10) || 1;
 
-    const props = { file: filePath, startLine: line, startColumn: col, title: 'svelte-check' as const };
-
-    if (sev === 'Error') core.error(message, props);
-    else if (sev === 'Warning') core.warning(message, props);
-    else core.notice(message, props);
+    findings.push({ severity: sev as 'Error' | 'Warning' | 'Hint', message, file: filePath, line, col });
   }
+
+  return findings;
+}
+
+function annotateFromOutput(output: string, workingDirectory: string) {
+  const findings = parseFindings(output, workingDirectory);
+  for (const f of findings) {
+    const props = { file: f.file, startLine: f.line, startColumn: f.col, title: 'svelte-check' as const };
+    if (f.severity === 'Error') core.error(f.message, props);
+    else if (f.severity === 'Warning') core.warning(f.message, props);
+    else core.notice(f.message, props);
+  }
+  return findings;
 }
 
 async function run(): Promise<void> {
@@ -87,11 +116,11 @@ async function run(): Promise<void> {
     const exitCode = await exec.exec(npx, args, options);
     core.info(`svelte-check exit code: ${exitCode}`);
 
-    annotateFromOutput(output + '\n' + errorOutput, workingDirectory);
+    const findings = annotateFromOutput(output + '\n' + errorOutput, workingDirectory);
 
-    const errorCount = (output.match(/Error:/g) || []).length;
-    const warningCount = (output.match(/Warning:/g) || []).length;
-    const hintCount = (output.match(/Hint:/g) || []).length;
+    const errorCount = findings.filter((f) => f.severity === 'Error').length;
+    const warningCount = findings.filter((f) => f.severity === 'Warning').length;
+    const hintCount = findings.filter((f) => f.severity === 'Hint').length;
 
     core.setOutput('errors', String(errorCount));
     core.setOutput('warnings', String(warningCount));

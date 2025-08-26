@@ -10,7 +10,7 @@
           "column": 3
         },
         {
-          "regexp": "^\\s*(Error|Warning):\\s*(.*)\\s+\\((?:ts|js|svelte)\\)$",
+          "regexp": "^\\s*(Error|Warning|Warn):\\s*(.*?)(?:\\s+\\((?:ts|js|svelte|css)\\))?$",
           "severity": 1,
           "message": 2,
           "loop": false
