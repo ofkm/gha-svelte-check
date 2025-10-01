@@ -14,7 +14,8 @@
     "test:integration": "jest __tests__/integration.test.ts",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "clean": "rm -rf lib dist"
+    "clean": "rm -rf lib dist",
+    "release": "bash scripts/release.sh"
   },
   "dependencies": {
     "@actions/core": "^1.11.1",

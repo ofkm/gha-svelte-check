@@ -1,0 +1,54 @@
+# git-cliff configuration for gha-svelte-check
+# https://git-cliff.org/docs/configuration
+
+[remote.github]
+owner = "ofkm"
+repo = "gha-svelte-check"
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+commit_preprocessors = [
+  { pattern = '\\((\\w+\\s)?#([0-9]+)\\)', replace = "" }
+]
+commit_parsers = [
+  { message = "^feat", group = "<!-- 0 --> New features" },
+  { message = "^fix", group = "<!-- 1 --> Bug fixes" },
+  { message = "^perf", group = "<!-- 2 --> Performance improvements" },
+  { message = "^docs", group = "<!-- 3 --> Documentation", default_scope = "other" },
+  { message = "^refactor", group = "<!-- 4 --> Refactoring", default_scope = "other" },
+  { message = "^chore", group = "<!-- 5 --> Chores", default_scope = "other" },
+  { message = "^test", group = "<!-- 6 --> Tests", default_scope = "other" },
+  { message = "^ci", group = "<!-- 7 --> Continuous integration", default_scope = "other" },
+  { message = "^release", skip = true },
+  { message = ".*", group = "<!-- 8 --> Other", default_scope = "other" },
+]
+filter_commits = false
+
+[changelog]
+trim = true
+body = """
+## {{ version | default(value="Unreleased") }}
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim | upper_first }}
+{% for commit in commits %}
+  * {{ commit.message }} \
+    {%- if commit.remote.pr_number -%}
+      ([#{{ commit.remote.pr_number }}]({{ self::remote_url() }}/pull/{{ commit.remote.pr_number }}) by @{{ commit.remote.username | default(value=commit.author.name) }})
+    {%- else -%}
+      ([{{ commit.id | truncate(length=7, end="") }}]({{ self::remote_url() }}/commit/{{ commit.id }}) by @{{ commit.remote.username | default(value=commit.author.name) }})
+    {%- endif -%}
+{% endfor %}
+{% endfor %}
+{% if version %}
+  {% if previous.version %}
+    **Full Changelog**: {{ self::remote_url() }}/compare/{{ previous.version }}...{{ version }}
+  {% endif %}
+{% else -%}
+  {% raw %}\n{% endraw %}
+{% endif %}
+
+{%- macro remote_url() -%}
+  https://github.com/{{ remote.github.owner }}/{{ remote.github.repo }}
+{%- endmacro -%}
+"""

@@ -27,3 +27,14 @@ A Simple GitHub Action that runs `svelte-check` on the given directory.
 | `errors`   | Number of errors found   |
 | `warnings` | Number of warnings found |
 | `hints`    | Number of hints found    |
+
+## Release Process
+
+1. Ensure `main` is clean and up to date.
+2. Run `npm run release`. The script will:
+   - determine the next version from conventional commits,
+   - run tests and rebuild `dist/`,
+   - update `CHANGELOG.md` via git-cliff,
+   - tag and push the release,
+   - create the corresponding GitHub release and update the major tag.
+3. Monitor the `Release` workflow to confirm the tag builds cleanly.

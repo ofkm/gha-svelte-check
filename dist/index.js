@@ -91,10 +91,20 @@ async function run() {
         const failOnWarnings = core.getInput('fail-on-warnings') === 'true';
         const failOnHints = core.getInput('fail-on-hints') === 'true';
         const tsconfig = core.getInput('tsconfig');
-        // When bundled with ncc, the matcher file should be in the same directory as index.js
-        const matcherPath = path.join(__dirname, 'svelte-check-matcher.json');
-        core.info(`Adding problem matcher: ${matcherPath}`);
-        console.log(`::add-matcher::${matcherPath}`);
+        // Resolve problem matcher robustly in both built (dist) and test/dev (src) contexts
+        const candidateMatcherPaths = [
+            path.join(__dirname, 'svelte-check-matcher.json'), // dist runtime
+            path.resolve(process.cwd(), 'dist/svelte-check-matcher.json'), // after local build
+            path.resolve(process.cwd(), '.github/svelte-check-matcher.json'), // repo source location
+        ];
+        const matcherPath = candidateMatcherPaths.find((p) => fs.existsSync(p));
+        if (matcherPath) {
+            core.info(`Adding problem matcher: ${matcherPath}`);
+            console.log(`::add-matcher::${matcherPath}`);
+        }
+        else {
+            core.info('Problem matcher file not found; continuing without matcher.');
+        }
         let looksLikeSvelteKit = false;
         try {
             const pkgJsonPath = path.join(workingDirectory, 'package.json');

@@ -6,11 +6,13 @@ on:
       - 'v*'
 
 jobs:
-  release:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -21,73 +23,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Run tests
+        run: npm test
+
       - name: Build action
         run: npm run build
 
-      - name: Commit dist
+      - name: Ensure dist is up to date
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add dist/
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "Build for release ${{ github.ref_name }}"
-            git push origin HEAD:${{ github.ref_name }} --force
+          if ! git diff --quiet -- dist; then
+            echo "dist/ is not in sync after build. Run the release script before tagging."
+            git --no-pager diff -- dist | head -n 200 || true
+            exit 1
           fi
-
-      - name: Create Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
-          body: |
-            ## GitHub Action: Svelte Check ${{ github.ref_name }}
-
-            Run `svelte-check` on a sveltejs project.
-
-            ### Usage
-            ```yaml
-            - name: Run Svelte Check
-              uses: ofkm/gha-svelte-check@${{ github.ref_name }}
-              with:
-                working-directory: './src'
-            ```
-
-            ### What's included
-            - ✅ TypeScript error detection
-            - ✅ Problem matcher for GitHub UI integration  
-            - ✅ Configurable failure conditions
-            - ✅ Support for custom working directories and tsconfig
-          draft: false
-          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
-
-  update-major-tag:
-    needs: release
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'rc')
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Update major version tag
-        run: |
-          TAG=${{ github.ref_name }}
-          MAJOR_VERSION=$(echo $TAG | cut -d. -f1)
-
-          echo "Updating $MAJOR_VERSION to point to $TAG"
-
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-
-          # Delete the major version tag if it exists
-          git tag -d $MAJOR_VERSION 2>/dev/null || true
-          git push origin :refs/tags/$MAJOR_VERSION 2>/dev/null || true
-
-          # Create new major version tag pointing to current commit
-          git tag $MAJOR_VERSION
-          git push origin $MAJOR_VERSION
