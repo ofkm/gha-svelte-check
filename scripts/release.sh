@@ -142,7 +142,7 @@ git push origin main
 git push origin "$TAG"
 
 echo "Updating major tag $MAJOR_TAG"
-git tag -f "$MAJOR_TAG" "$TAG"
+git tag -f -a "$MAJOR_TAG" -m "Release $MAJOR_TAG (latest: $TAG)" "$TAG"
 git push origin "$MAJOR_TAG" --force
 
 echo "Creating GitHub release..."
