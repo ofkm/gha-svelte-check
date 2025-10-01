@@ -4,7 +4,7 @@
   "description": "GitHub Action for running svelte-check with problem matcher",
   "main": "dist/index.js",
   "scripts": {
-    "build": "rm -rf lib dist && tsc --outDir lib && ncc build lib/src/index.js -o dist",
+    "build": "rm -rf lib dist && tsc --outDir lib && ncc build lib/src/index.js -o dist && cp .github/svelte-check-matcher.json dist/",
     "dev": "tsc --watch",
     "test": "jest",
     "test:unit": "jest __tests__/index.test.ts",
@@ -15,8 +15,7 @@
   },
   "dependencies": {
     "@actions/core": "^1.11.1",
-    "@actions/exec": "^1.1.1",
-    "ts-node": "^10.9.2"
+    "@actions/exec": "^1.1.1"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

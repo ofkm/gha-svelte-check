@@ -6,3 +6,7 @@ node_modules/
 
 # Don't ignore dist/ - GitHub Actions need the compiled code
 # dist/
+
+# Ignore build intermediates and coverage
+lib/
+coverage/

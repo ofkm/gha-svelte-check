@@ -62,7 +62,8 @@ async function run(): Promise<void> {
     const failOnHints = core.getInput('fail-on-hints') === 'true';
     const tsconfig = core.getInput('tsconfig');
 
-    const matcherPath = path.join(__dirname, '..', '.github', 'svelte-check-matcher.json');
+    // When bundled with ncc, the matcher file should be in the same directory as index.js
+    const matcherPath = path.join(__dirname, 'svelte-check-matcher.json');
     core.info(`Adding problem matcher: ${matcherPath}`);
     console.log(`::add-matcher::${matcherPath}`);
 
@@ -71,8 +72,7 @@ async function run(): Promise<void> {
       const pkgJsonPath = path.join(workingDirectory, 'package.json');
       const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
       looksLikeSvelteKit = Boolean(
-        (pkg.dependencies && pkg.dependencies['@sveltejs/kit']) ||
-          (pkg.devDependencies && pkg.devDependencies['@sveltejs/kit'])
+        (pkg.dependencies && pkg.dependencies['@sveltejs/kit']) || (pkg.devDependencies && pkg.devDependencies['@sveltejs/kit'])
       );
     } catch {
       // ignore, skip sync
@@ -131,30 +131,30 @@ async function run(): Promise<void> {
     core.info(`  Warnings: ${warningCount}`);
     core.info(`  Hints: ${hintCount}`);
 
-    let shouldFail = false;
+    // Always fail if svelte-check itself failed
+    if (exitCode !== 0) {
+      core.error(`svelte-check exited with code ${exitCode}`);
+    }
+
+    let shouldFail = exitCode !== 0;
 
     if (errorCount > 0) {
       shouldFail = true;
-      core.error(`Found ${errorCount} errors`);
+      core.error(`Found ${errorCount} error(s) - failing build`);
     }
     if (failOnWarnings && warningCount > 0) {
       shouldFail = true;
-      core.error(`Found ${warningCount} warnings (fail-on-warnings is enabled)`);
+      core.error(`Found ${warningCount} warning(s) (fail-on-warnings is enabled)`);
     }
     if (failOnHints && hintCount > 0) {
       shouldFail = true;
-      core.error(`Found ${hintCount} hints (fail-on-hints is enabled)`);
-    }
-
-    if (!shouldFail && exitCode !== 0 && errorOutput.trim()) {
-      shouldFail = true;
-      core.error(errorOutput);
+      core.error(`Found ${hintCount} hint(s) (fail-on-hints is enabled)`);
     }
 
     if (shouldFail) {
       core.setFailed('Svelte check found issues');
     } else {
-      core.info('Svelte check completed successfully');
+      core.info('✅ Svelte check completed successfully');
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
