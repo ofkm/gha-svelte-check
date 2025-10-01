@@ -3,6 +3,27 @@
 ### Bug fixes
 
 * robust problem matcher resolution; use Node 24 in workflows and dev; relax engines([4eea1f5](https://github.com/ofkm/gha-svelte-check/commit/4eea1f542c2b11b6ad66d8732ba085b6c0fa708f) by @kmendell)
+* ensure release script runs git-cliff with unreleased commits([75f6720](https://github.com/ofkm/gha-svelte-check/commit/75f6720a03577c1ea84bca18e524833fdcf470c3) by @kmendell)
+
+### Chores
+
+* align action to node20, ignore lib, update workflows, rebuild dist([672c8fb](https://github.com/ofkm/gha-svelte-check/commit/672c8fb580a0a3e7f77ae78b7b2714eb8b5ac0b1) by @kmendell)
+* integrate git-cliff release tooling([2362d57](https://github.com/ofkm/gha-svelte-check/commit/2362d5712b576f5fc34482a6b1f045908033da39) by @kmendell)
+
+### Continuous integration
+
+* add check-dist workflow, engines field, .nvmrc, mark dist as generated; align checkout to v5([ea4b9a3](https://github.com/ofkm/gha-svelte-check/commit/ea4b9a3f03bb35858343f68c1aca26567c4a5253) by @kmendell)
+* use Node 24 in all workflows; engines set to 24; checkout v5 in tests([07dae1d](https://github.com/ofkm/gha-svelte-check/commit/07dae1d88ee81b2c0515595fc502220869823933) by @kmendell)
+
+
+
+**Full Changelog**: https://github.com/ofkm/gha-svelte-check/compare/v1.1.2...v1.1.3
+
+## v1.1.3
+
+### Bug fixes
+
+* robust problem matcher resolution; use Node 24 in workflows and dev; relax engines([4eea1f5](https://github.com/ofkm/gha-svelte-check/commit/4eea1f542c2b11b6ad66d8732ba085b6c0fa708f) by @kmendell)
 * ensure release script runs git-cliff with unreleased commits([75f6720](https://github.com/ofkm/gha-svelte-check/commit/75f6720a03577c1ea84bca18e524833fdcf470c3) by @Kyle Mendell)
 
 ### Chores
