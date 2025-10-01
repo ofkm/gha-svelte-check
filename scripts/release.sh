@@ -122,7 +122,7 @@ if ! git diff --quiet -- dist; then
 fi
 
 touch CHANGELOG.md
-git cliff --config .git-cliff.toml --tag "$TAG" --unreleased --prepend CHANGELOG.md
+git cliff --config .git-cliff.toml --tag "$TAG" --latest --prepend CHANGELOG.md
 
 git add package.json package-lock.json CHANGELOG.md dist
 
@@ -135,7 +135,7 @@ MAJOR_TAG=$(echo "$TAG" | cut -d. -f1)
 tmp_notes=$(mktemp)
 trap 'rm -f "$tmp_notes"' EXIT
 
-git cliff --config .git-cliff.toml --tag "$TAG" --unreleased > "$tmp_notes"
+git cliff --config .git-cliff.toml --tag "$TAG" > "$tmp_notes"
 
 echo "Pushing changes..."
 git push origin main
